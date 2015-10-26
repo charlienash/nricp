@@ -1,4 +1,4 @@
-function [ pointsCor, ittErr ] = nricp( pointsTemplate, pointsTarget, Target, Options )
+function [ pointsCor, ittErr ] = nricp( Source, Target, Options )
 % nricp performs an adaptive stiffness variant of non rigid ICP.
 %
 % This function deforms takes a dense set of landmarks points from a template
@@ -29,9 +29,12 @@ function [ pointsCor, ittErr ] = nricp( pointsTemplate, pointsTarget, Target, Op
 % Example:
 
 %% Get nPoints
-nPointsTemplate = size(pointsTemplate, 1);
+nVertsTemplate = size(Source.vertices, 1);
+% nPointsTarget = size(pointsTarget, 1);
+pointsCor = Source.vertices;
+pointsTarget = Target.vertices;
 nPointsTarget = size(pointsTarget, 1);
-pointsCor = pointsTemplate;
+
 
 %% Set parameters 
 G = diag([1 1 1 Options.gamm]);
@@ -39,20 +42,29 @@ G = diag([1 1 1 Options.gamm]);
 %% Plot model
 clf;
 patch(Target, 'facecolor', 'b', 'EdgeColor', ...
-      'none', 'FaceAlpha', 0.25); 
-view([-1 -1.2 0.2]); 
+      'none', 'FaceAlpha', 0.5);
+hold on;
+patch(Source, 'facecolor', 'r', 'EdgeColor', ...
+      'none', 'FaceAlpha', 0.5);
+view([30,20]);
+material dull;
+light;
 grid on; 
-hold on; 
-h = scatter3(pointsTemplate(:,1), ...
-             pointsTemplate(:,2), ...
-             pointsTemplate(:,3), ...
-             'r', 'filled');
+hold on;
+xlabel('x');
+ylabel('y')
+zlabel('z')
+% h = scatter3(pointsTemplate(:,1), ...
+%              pointsTemplate(:,2), ...
+%              pointsTemplate(:,3), ...
+%              'r', 'filled');
 % scatter3(pointsTarget(:,1), ...
 %          pointsTarget(:,2), ...
 %          pointsTarget(:,3), ...
 %          'g', 'filled');
 axis equal; 
 axis manual;
+legend('Target', 'Source', 'Location', 'best')
 
 %% Non Rigid ICP
 % s = sprintf('Starting non-rigid deformation... \n\nIteration   Error');
@@ -61,13 +73,13 @@ itt = 1;
 nAlpha = numel(Options.alphaSet);
 ittErr = zeros(nAlpha, 3);
 oldError = 1000;
-newError = oldError * 10;
+newError = Inf;
 
 for i = 1:nAlpha
     
     % Update stiffness
     alpha = Options.alphaSet(i);
-    s = sprintf('\nalpha = %3.3f\nIteration  Error',alpha);
+    s = sprintf('\nalpha = %3.3f\nIteration  Error', alpha);
     disp(s);
     
     while norm(oldError - newError) >= Options.epsilon
@@ -76,8 +88,8 @@ for i = 1:nAlpha
         oldError = newError;
     
         % Specify D_temp
-        X = zeros(nPointsTemplate, 4 * nPointsTemplate);
-        for i = 1:nPointsTemplate
+        X = zeros(nVertsTemplate, 4 * nVertsTemplate);
+        for i = 1:nVertsTemplate
             X(i,(4 * i-3):(4 * i)) = [pointsCor(i,:) 1];
         end
 
@@ -91,14 +103,14 @@ for i = 1:nAlpha
 %         W = diag(sim ./ max(sim));
         
         % 2. No weighting
-        W = eye(nPointsTemplate);
+        W = eye(nVertsTemplate);
         
         % Set target landmarks tarU
-        tarU = pointsTarget;
+        tarU = Target.vertices;
         
         % Specify tarD
-        [idTarget, distTar] = knnsearch(pointsCor, pointsTarget);
-        tarX = zeros(nPointsTarget, 4 * nPointsTemplate);
+        [idTarget, distTar] = knnsearch(pointsCor, tarU);
+        tarX = zeros(nPointsTarget, 4 * nVertsTemplate);
         for i = 1:nPointsTarget
             cor = idTarget(i);
             tarX(i,(4 * cor-3):(4 * cor)) = [pointsCor(cor,:) 1];
