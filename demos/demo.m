@@ -1,8 +1,11 @@
 %% Complete meshes demo
 
+%% Set working directory
+cd /home/charlie/nricp
+
 %% Load data
-load source.mat
-load target.mat
+load data/source.mat
+load data/target.mat
 
 %% Specify parameters
 Options.gamm = 2;
@@ -11,11 +14,13 @@ Options.lambda = 2;
 Options.epsilon = 1e-1;
 
 % Stiffness parameters
-startValue = 100;
+startValue = 10000;
 endValue = 5;
 nElements = 50;
 Options.alphaSet = linspace(startValue, endValue, nElements);
 A = triangulation2adjacency(Source.faces, Source.vertices);
-% Options.M = triangulation2adjacency(Source.faces, Source.vertex)
+Options.M = adjacency2incidence(A)';
 
+%% nricp
+points
 
