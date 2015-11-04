@@ -4,19 +4,17 @@
 cd /home/charlie/nricp
 
 %% Load data
-load data/source.mat
-load data/target.mat
+load data/faceSource.mat
+load data/faceTarget.mat
 
 %% Specify parameters
-Options.gamm = 2;
-Options.k = 8;
-Options.lambda = 2;
-Options.epsilon = 1e-1;
+Options.gamm = 1;
+Options.epsilon = 1e-8;
 
 % Stiffness parameters
-startValue = 10000;
-endValue = 5;
-nElements = 50;
+startValue = 100;
+endValue = 1e-3;
+nElements = 200;
 Options.alphaSet = linspace(startValue, endValue, nElements);
 A = triangulation2adjacency(Source.faces, Source.vertices);
 Options.M = adjacency2incidence(A)';
