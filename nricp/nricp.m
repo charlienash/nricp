@@ -29,19 +29,25 @@ function [ pointsTemplate, ittErr ] = nricp( Source, Target, Options )
 % Example:
 
 %% Get nPoints
+normalsTemplate = Source.normals;
 pointsTemplate = Source.vertices;
-nPointsTemplate = size(pointsTemplate, 1)
+nPointsTemplate = size(pointsTemplate, 1);
 pointsTarget = Target.vertices;
 
 %% Set parameters 
 G = diag([1 1 1 Options.gamm]);
 
 %% Plot model
+TargetPatch.faces = Target.faces;
+TargetPatch.vertices = Target.vertices;
+SourcePatch.faces = Source.faces;
+SourcePatch.vertices = Source.vertices;
 clf;
-patch(Target, 'facecolor', 'b', 'EdgeColor', ...
+patch(TargetPatch, 'facecolor', 'b', 'EdgeColor', ...
       'none', 'FaceAlpha', 0.5);
 hold on;
-h = patch(Source, 'facecolor', 'r', 'FaceAlpha', 0.5);
+h = patch(SourcePatch, 'facecolor', 'r', 'EdgeColor', 'none', ... 
+'FaceAlpha', 0.5);
 material dull;
 light;
 grid on; 
@@ -68,6 +74,10 @@ for i = 1:nPointsTemplate
     D(i,(4 * i-3):(4 * i)) = [pointsTemplate(i,:) 1];
 end
 W = sparse(eye(nPointsTemplate));
+N = sparse(zeros(nPointsTemplate, 4 * nPointsTemplate));
+for i = 1:nPointsTemplate
+    N(i,(4 * i-3):(4 * i)) = [normalsTemplate(i,:) 1];
+end
 
 %% Non Rigid ICP
 nAlpha = numel(Options.alphaSet);
@@ -108,6 +118,10 @@ for i = 1:nAlpha
         
     end
 end
+
+%% Compute transformed points and normals
+pointsTransformed = D*X;
+normalsTransformed = N*X;
 
 %% Snap nodes to closest corresponding points on target
 % idx = knnsearch(pointsTarget, pointsTransformed);

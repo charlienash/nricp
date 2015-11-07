@@ -20,5 +20,6 @@ A = triangulation2adjacency(Source.faces, Source.vertices);
 Options.M = adjacency2incidence(A)';
 
 %% nricp
-points
+correspondences = nricp( Source, Target, Options );
+
 
