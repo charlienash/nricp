@@ -59,7 +59,7 @@ nPointsTemplate = size(pointsTemplate, 1);
 
 pointsTarget = Target.vertices;
 
-nodesTarget = getnodes(Target, 10);
+nodesTarget = samplePoints(Target, 10);
 nNodesTarget = size(nodesTarget, 1);
 
 %% Set parameters 
@@ -83,14 +83,6 @@ hold on;
 xlabel('x');
 ylabel('y')
 zlabel('z')
-% h = scatter3(pointsTemplate(:,1), ...
-%              pointsTemplate(:,2), ...
-%              pointsTemplate(:,3), ...
-%              'r', 'filled');
-% scatter3(pointsTarget(:,1), ...
-%          pointsTarget(:,2), ...
-%          pointsTarget(:,3), ...
-%          'g', 'filled');
 view([90,0]);
 axis equal; 
 axis manual;
