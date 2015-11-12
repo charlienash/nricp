@@ -83,7 +83,7 @@ hold on;
 xlabel('x');
 ylabel('y')
 zlabel('z')
-view([90,0]);
+view([60,30]);
 axis equal; 
 axis manual;
 legend('Target', 'Source', 'Location', 'best')
