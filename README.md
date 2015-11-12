@@ -2,6 +2,9 @@
 
 https://github.com/charlienash/nricp
 
+![face demo]
+(https://github.com/charlienash/nricp/blob/master/demos/faceDemo.jpg)
+
 nricp is a MATLAB implementation of a non-rigid variant of the iterative closest point algorithm. It can be used to register 3D surfaces or point-clouds. The algorithm is an implementation of the method described in the following paper along with some additional features:
 
 'Optimal Step Nonrigid ICP Algorithms for Surface Registration', Amberg, Romandhani and Vetter, CVPR, 2007.
