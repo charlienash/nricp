@@ -1,4 +1,4 @@
-function [ vertsTransformed, X ] = nricp( Source, Target, Options )
+function [ pointsTransformed, X ] = nricp( Source, Target, Options )
 % nricp performs an adaptive stiffness variant of non rigid ICP.
 %
 % This function deforms takes a dense set of landmarks points from a template
@@ -40,7 +40,10 @@ function [ vertsTransformed, X ] = nricp( Source, Target, Options )
 %
 % Outputs:
 %   vertsTransformed : N X 3 vertices of transformed source mesh,
-%   X : (4N) X 3 stacked matrix of transformations.
+%   X : 
+%
+% Example:
+
 
 % Set default parameters
 if ~isfield(Options, 'gamm')
@@ -86,13 +89,13 @@ if Options.plot == 1
 end
 
 % Get source vertices 
-vertsSource = Source.vertices;
-nVertsSource = size(vertsSource, 1);
+pointsSource = Source.vertices;
+nPointsSource = size(pointsSource, 1);
 
 % Get target vertices
-vertsTarget = Target.vertices;
+pointsTarget = Target.vertices;
 
-% Get subset of target vertices if Options.biDirectional == 1
+% Get subset of target points if Options.biDirectional == 1
 if Options.biDirectional == 1
     samplesTarget = sampleVerts(Target, 15);
     nSamplesTarget = size(samplesTarget, 1);
@@ -106,13 +109,13 @@ A = triangulation2adjacency(Source.faces, Source.vertices);
 M = adjacency2incidence(A)';
 
 % Set matrix D (equation (8) in Amberg et al.)
-D = sparse(nVertsSource, 4 * nVertsSource);
-for i = 1:nVertsSource
-    D(i,(4 * i-3):(4 * i)) = [vertsSource(i,:) 1];
+D = sparse(nPointsSource, 4 * nPointsSource);
+for i = 1:nPointsSource
+    D(i,(4 * i-3):(4 * i)) = [pointsSource(i,:) 1];
 end
 
 % Set weights matrix
-W = speye(nVertsSource);
+W = speye(nPointsSource);
 
 % Set target points matrix tarU and target weights matrix tarU
 % if Options.biDirectional == 1.
@@ -124,13 +127,13 @@ end;
 % Do rigid iterative closest point if Options.rigidInit == 1
 if Options.rigidInit == 1
     disp('* Performing rigid ICP...');
-    [R, t] = icp(vertsTarget', vertsSource', 10, 'Verbose', true);
-    X = repmat([R'; t'], nVertsSource, 1);
-    vertsTransformed = D*X;
+    [R, t] = icp(pointsTarget', pointsSource', 10, 'Verbose', true);
+    X = repmat([R'; t'], nPointsSource, 1);
+    pointsTransformed = D*X;
     
     % Update plot
     if Options.plot == 1
-        set(h, 'Vertices', vertsTransformed);
+        set(h, 'Vertices', pointsTransformed);
         drawnow;
     end
 else
@@ -159,22 +162,22 @@ for i = 1:nAlpha
     while norm(X - oldX) >= Options.epsilon 
         
         % Transform source points by current transformation matrix X
-        vertsTransformed = D*X;
+        pointsTransformed = D*X;
         
         % Update plot 
         if Options.plot == 1
-            set(h, 'Vertices', vertsTransformed);
+            set(h, 'Vertices', pointsTransformed);
             drawnow;
         end
 
         % Determine closest points on target U to transformed source points
         % pointsTransformed.
-        targetId = knnsearch(vertsTarget, vertsTransformed);
-        U = vertsTarget(targetId,:);
+        targetId = knnsearch(pointsTarget, pointsTransformed);
+        U = pointsTarget(targetId,:);
         
         % Get closest points on source tarD to target samples samplesTarget
         if Options.biDirectional == 1
-            transformedId = knnsearch(vertsTransformed, samplesTarget);
+            transformedId = knnsearch(pointsTransformed, samplesTarget);
             tarD = sparse(nSamplesTarget, 4 * nPointsTemplate);
             for i = 1:nSamplesTarget
                 cor = transformedId(i);
@@ -211,7 +214,7 @@ for i = 1:nAlpha
 end
 
 % Compute transformed points 
-vertsTransformed = D*X;
+pointsTransformed = D*X;
 
 % If Options.useNormals == 1 project along surface normals to target 
 % surface, otherwise snap to closest points on target.
@@ -222,24 +225,24 @@ if Options.useNormals == 1
     normalsTemplate = Source.normals;
     
     % Transform surface normals with the X matrix
-    N = sparse(nVertsSource, 4 * nVertsSource);
-    for i = 1:nVertsSource
+    N = sparse(nPointsSource, 4 * nPointsSource);
+    for i = 1:nPointsSource
         N(i,(4 * i-3):(4 * i)) = [normalsTemplate(i,:) 1];
     end
     normalsTransformed = N*X;
     
     % Project normals to target surface
-    vertsTransformed = projectNormals(vertsTransformed, Target, ...
+    pointsTransformed = projectNormals(pointsTransformed, Target, ...
                                        normalsTransformed);
 else
     % Snap template points to nearest vertices on surface
-    targetId = knnsearch(vertsTarget, vertsTransformed);
-    vertsTransformed = vertsTarget(targetId,:);
+    targetId = knnsearch(pointsTarget, pointsTransformed);
+    pointsTransformed = pointsTarget(targetId,:);
 end
 
 % Update plot and remove target mesh
 if Options.plot == 1
-    set(h, 'Vertices', vertsTransformed);
+    set(h, 'Vertices', pointsTransformed);
     drawnow;
     pause(2);
     delete(p);
