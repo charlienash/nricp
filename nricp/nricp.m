@@ -67,8 +67,14 @@ end
 if ~isfield(Options, 'rigidInit')
     Options.rigidInit = 1;
 end
+if ~isfield(Options, 'ignoreBoundary')
+    Options.ignoreBoundary = 1;
+end
+if ~isfield(Options, 'normalWeighting')
+    Options.normalWeighting = 1;
+end
 
-% Plot model if Options.plot == 1
+% Optionally plot source and target surfaces
 if Options.plot == 1
     clf;
     PlotTarget = rmfield(Target, 'normals');
@@ -92,6 +98,12 @@ nVertsSource = size(vertsSource, 1);
 % Get target vertices
 vertsTarget = Target.vertices;
 
+% Optionally get source / target normals
+if Options.normalWeighting == 1
+    normalsSource = Source.normals;
+    normalsTarget = Target.normals;
+end
+
 % Get subset of target vertices if Options.biDirectional == 1
 if Options.biDirectional == 1
     samplesTarget = sampleVerts(Target, 15);
@@ -112,7 +124,12 @@ for i = 1:nVertsSource
 end
 
 % Set weights matrix
-W = speye(nVertsSource);
+wVec = ones(nVertsSource,1);
+
+% Get boundary vertex indices on target surface if required.
+if Options.ignoreBoundary == 1
+    bdr = find_bound(vertsTarget, Target.faces);
+end
 
 % Set target points matrix tarU and target weights matrix tarU
 % if Options.biDirectional == 1.
@@ -124,7 +141,12 @@ end;
 % Do rigid iterative closest point if Options.rigidInit == 1
 if Options.rigidInit == 1
     disp('* Performing rigid ICP...');
-    [R, t] = icp(vertsTarget', vertsSource', 10, 'Verbose', true);
+    if Options.ignoreBoundary == 0
+        bdr = 0;
+    end
+    [R, t] = icp(vertsTarget', vertsSource', 50, 'Verbose', true, ...
+                 'EdgeRejection', logical(Options.ignoreBoundary), ...
+                 'Boundary', bdr');
     X = repmat([R'; t'], nVertsSource, 1);
     vertsTransformed = D*X;
     
@@ -135,7 +157,7 @@ if Options.rigidInit == 1
     end
 else
     % Otherwise initialize transformation matrix X with identity matrices
-    X = repmat([eye(3); [0 0 0]], nPointsTemplate, 1);
+    X = repmat([eye(3); [0 0 0]], nVertsSource, 1);
 end
 
 % get number of element in the set of stiffness parameters Options.alphaSet
@@ -172,6 +194,34 @@ for i = 1:nAlpha
         targetId = knnsearch(vertsTarget, vertsTransformed);
         U = vertsTarget(targetId,:);
         
+        % Optionally give zero weightings to transformations associated
+        % with boundary target vertices.
+        if Options.ignoreBoundary == 1
+            tarBoundary = ismember(targetId, bdr);
+            wVec = ~tarBoundary;
+        end
+        
+        % Optionally transform surface normals to compare with target and
+        % give zero weight if surface and transformed normals do not have
+        % similar angles.
+        if Options.normalWeighting == 1
+            N = sparse(nVertsSource, 4 * nVertsSource);
+            for i = 1:nVertsSource
+                N(i,(4 * i-3):(4 * i)) = [normalsSource(i,:) 1];
+            end
+            normalsTransformed = N*X;
+            corNormalsTarget = normalsTarget(targetId,:);
+            crossNormals = cross(corNormalsTarget, normalsTransformed);
+            crossNormalsNorm = sqrt(sum(crossNormals.^2,2));
+            dotNormals = dot(corNormalsTarget, normalsTransformed, 2);
+            angle = atan2(crossNormalsNorm, dotNormals);
+%             disp(sum(angle>pi/4));
+            wVec = wVec .* (angle<pi/4);
+        end
+            
+        % Update weight matrix
+        W = spdiags(wVec, 0, nVertsSource, nVertsSource);
+
         % Get closest points on source tarD to target samples samplesTarget
         if Options.biDirectional == 1
             transformedId = knnsearch(vertsTransformed, samplesTarget);
@@ -242,7 +292,7 @@ if Options.plot == 1
     set(h, 'Vertices', vertsTransformed);
     drawnow;
     pause(2);
-    delete(p);
+%     delete(p);
 end
 
 function [projections] = projectNormals(sourceVertices, Target, normals)
@@ -317,6 +367,26 @@ while size(vertsLeft, 1) > 0
     
     itt = itt + 1;
 end
+
+
+function bound = find_bound(pts, poly)
+%  From Iterative Closest Point: 
+% http://www.mathworks.com/matlabcentral/fileexchange/27804-iterative-closest-point
+
+% Boundary point determination. Given a set of 3D points and a
+% corresponding triangle representation, returns those point indices that
+% define the border/edge of the surface.
+% Correcting polygon indices and converting datatype 
+
+poly = double(poly);
+pts = double(pts);
+
+%Calculating freeboundary points:
+TR = triangulation(poly, pts);
+FF = freeBoundary(TR);
+
+%Output
+bound = FF(:,1);
 
 
 
