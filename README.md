@@ -14,9 +14,10 @@ Features:
 * Iterative stiffness reduction allows for global intitial transformations that become increasingly localised.  
 * Optional initial rigid registration using standard iterative closest point.
 * Optional bi-directional distance metric which encourages surface deformations to cover more of the target surface
+* Handles missing data in the target surface by ignoring correspondences with points on target edges.
 
-Limitations:
-* Does not yet support missing data in either the target or source surfaces.
+![missing data demo]
+(https://github.com/charlienash/nricp/blob/master/demos/faceDemoMissing.jpg)
 
 ## Dependencies
 
