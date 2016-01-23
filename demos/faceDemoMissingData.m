@@ -1,6 +1,5 @@
 %% Demo 2: With missing data
 
-% Load data
 load data/faceSource.mat
 load data/faceTargetMissing.mat
 

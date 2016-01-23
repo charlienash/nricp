@@ -163,10 +163,6 @@ end
 % get number of element in the set of stiffness parameters Options.alphaSet
 nAlpha = numel(Options.alphaSet);
 
-% set oldX to be very different to X so that norm(X - oldX) is large on 
-% first iteration
-oldX = 10*X;
-
 % Enter outer loop of the non-rigid iterative closest point algorithm. The
 % outer loop iterates over stiffness parameters alpha.
 disp('* Performing non-rigid ICP...');
@@ -174,6 +170,10 @@ for i = 1:nAlpha
     
     % Update stiffness
     alpha = Options.alphaSet(i);
+    
+    % set oldX to be very different to X so that norm(X - oldX) is large on 
+	% first iteration
+	oldX = 10*X;
     
     % Enter inner loop. For each stiffness setting alternate between 
     % updating correspondences and getting optimal transformations X. 
