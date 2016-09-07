@@ -117,13 +117,16 @@ G = diag([1 1 1 Options.gamm]);
 A = triangulation2adjacency(Source.faces, Source.vertices);
 M = adjacency2incidence(A)';
 
+% Precompute kronecker product of M and G
+kron_M_G = kron(M, G);
+
 % Set matrix D (equation (8) in Amberg et al.)
 D = sparse(nVertsSource, 4 * nVertsSource);
 for i = 1:nVertsSource
     D(i,(4 * i-3):(4 * i)) = [vertsSource(i,:) 1];
 end
 
-% Set weights matrix
+% Set weights vector
 wVec = ones(nVertsSource,1);
 
 % Get boundary vertex indices on target surface if required.
@@ -135,7 +138,7 @@ end
 % if Options.biDirectional == 1.
 if Options.biDirectional == 1
     tarU = samplesTarget;
-    tarW = speye(nSamplesTarget);
+    tarW = eye(nSamplesTarget);
 end;
 
 % Do rigid iterative closest point if Options.rigidInit == 1
@@ -185,7 +188,7 @@ for i = 1:nAlpha
         
         % Update plot 
         if Options.plot == 1
-            set(h, 'Vertices', vertsTransformed);
+            set(h, 'Vertices', full(vertsTransformed));
             drawnow;
         end
 
@@ -206,8 +209,8 @@ for i = 1:nAlpha
         % similar angles.
         if Options.normalWeighting == 1
             N = sparse(nVertsSource, 4 * nVertsSource);
-            for i = 1:nVertsSource
-                N(i,(4 * i-3):(4 * i)) = [normalsSource(i,:) 1];
+            for j = 1:nVertsSource
+                N(j,(4 * j-3):(4 * j)) = [normalsSource(j,:) 1];
             end
             normalsTransformed = N*X;
             corNormalsTarget = normalsTarget(targetId,:);
@@ -215,7 +218,6 @@ for i = 1:nAlpha
             crossNormalsNorm = sqrt(sum(crossNormals.^2,2));
             dotNormals = dot(corNormalsTarget, normalsTransformed, 2);
             angle = atan2(crossNormalsNorm, dotNormals);
-%             disp(sum(angle>pi/4));
             wVec = wVec .* (angle<pi/4);
         end
             
@@ -225,16 +227,16 @@ for i = 1:nAlpha
         % Get closest points on source tarD to target samples samplesTarget
         if Options.biDirectional == 1
             transformedId = knnsearch(vertsTransformed, samplesTarget);
-            tarD = sparse(nSamplesTarget, 4 * nPointsTemplate);
-            for i = 1:nSamplesTarget
-                cor = transformedId(i);
-                tarD(i,(4 * cor-3):(4 * cor)) = [pointsTemplate(cor,:) 1];
+            tarD = sparse(nSamplesTarget, 4 * nVertsSource);
+            for j = 1:nSamplesTarget
+                cor = transformedId(j);
+                tarD(j,(4 * cor-3):(4 * cor)) = [vertsSource(cor,:) 1];
             end
         end
 
         % Specify B and C (See equation (12) from paper)
         A = [...
-            alpha .* kron(M, G); 
+            alpha .* kron_M_G; 
             W * D;
             ];
         B = [...
@@ -256,7 +258,7 @@ for i = 1:nAlpha
 
         % Get optimal transformation X and remember old transformation oldX
         oldX = X;
-        X = (A' * A) \ (A' * B);        
+        X = (A' * A) \ (A' * B);
     end
 end
 
@@ -284,7 +286,12 @@ if Options.useNormals == 1
 else
     % Snap template points to nearest vertices on surface
     targetId = knnsearch(vertsTarget, vertsTransformed);
-    vertsTransformed = vertsTarget(targetId,:);
+    corTargets = vertsTarget(targetId,:);
+    if Options.ignoreBoundary == 1
+        tarBoundary = ismember(targetId, bdr);
+        wVec = ~tarBoundary;
+    end
+    vertsTransformed(wVec,:) = corTargets(wVec,:);
 end
 
 % Update plot and remove target mesh
@@ -387,10 +394,3 @@ FF = freeBoundary(TR);
 
 %Output
 bound = FF(:,1);
-
-
-
-
-
-
-
