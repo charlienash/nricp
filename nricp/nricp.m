@@ -121,10 +121,9 @@ M = adjacency2incidence(A)';
 kron_M_G = kron(M, G);
 
 % Set matrix D (equation (8) in Amberg et al.)
-D = sparse(nVertsSource, 4 * nVertsSource);
-for i = 1:nVertsSource
-    D(i,(4 * i-3):(4 * i)) = [vertsSource(i,:) 1];
-end
+I = (1:nVertsSource)';
+J = 4*I;
+D = sparse([I;I;I;I],[J-3;J-2;J-1;J],[vertsSource(:);ones(nVertsSource,1)],nVertsSource, 4*nVertsSource);
 
 % Set weights vector
 wVec = ones(nVertsSource,1);
@@ -139,7 +138,7 @@ end
 if Options.biDirectional == 1
     tarU = samplesTarget;
     tarW = eye(nSamplesTarget);
-end;
+end
 
 % Do rigid iterative closest point if Options.rigidInit == 1
 if Options.rigidInit == 1
@@ -149,7 +148,7 @@ if Options.rigidInit == 1
     end
     [R, t] = icp(vertsTarget', vertsSource', 50, 'Verbose', true, ...
                  'EdgeRejection', logical(Options.ignoreBoundary), ...
-                 'Boundary', bdr');
+                 'Boundary', bdr', 'Matching', 'kDtree');
     X = repmat([R'; t'], nVertsSource, 1);
     vertsTransformed = D*X;
     
@@ -208,10 +207,10 @@ for i = 1:nAlpha
         % give zero weight if surface and transformed normals do not have
         % similar angles.
         if Options.normalWeighting == 1
-            N = sparse(nVertsSource, 4 * nVertsSource);
-            for j = 1:nVertsSource
-                N(j,(4 * j-3):(4 * j)) = [normalsSource(j,:) 1];
-            end
+            I = (1:nVertsSource)';
+            J = 4*I;
+            N = sparse([I;I;I;I],[J-3;J-2;J-1;J],[normalsSource(:);ones(nVertsSource,1)],nVertsSource, 4*nVertsSource);
+
             normalsTransformed = N*X;
             corNormalsTarget = normalsTarget(targetId,:);
             crossNormals = cross(corNormalsTarget, normalsTransformed);
@@ -274,10 +273,10 @@ if Options.useNormals == 1
     normalsTemplate = Source.normals;
     
     % Transform surface normals with the X matrix
-    N = sparse(nVertsSource, 4 * nVertsSource);
-    for i = 1:nVertsSource
-        N(i,(4 * i-3):(4 * i)) = [normalsTemplate(i,:) 1];
-    end
+    I = (1:nVertsSource)';
+    J = 4*I;
+    N = sparse([I;I;I;I],[J-3;J-2;J-1;J],[normalsTemplate(:);ones(nVertsSource,1)],nVertsSource, 4*nVertsSource);
+
     normalsTransformed = N*X;
     
     % Project normals to target surface
